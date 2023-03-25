@@ -111,8 +111,6 @@ jobs:
           echo "Building package"
           ${{ inputs.build_command != '' && inputs.build_command }}
           cd ${{ inputs.publish_directory }}
-          echo "Installing prod dependencies"
-          yarn install --ignore-scripts --production --pure-lockfile
           echo "Publishing package"
           yarn publish --tag ${{ inputs.is_draft && 'beta' || 'latest' }} --verbose
         env:
