@@ -16,6 +16,9 @@ on:
       build_command:
         type: string
         required: false
+      default_branch:
+        type: string
+        default: master
     secrets:
       NPM_TOKEN:
         required: true
