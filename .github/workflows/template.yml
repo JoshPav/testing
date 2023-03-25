@@ -108,10 +108,10 @@ jobs:
         run: npm version $VERSION --allow-same-version
       - name: Build and publish package
         run: |
-          echo "Building package"
-          ${{ inputs.build_command != '' && inputs.build_command }}
+          ${{ inputs.build_command != '' && 'echo Building package...' || 'echo No build command specfied.'}}
+          ${{ inputs.build_command != '' &&  inputs.build_command }}
           cd ${{ inputs.publish_directory }}
-          echo "Publishing package"
+          echo "Publishing package..."
           yarn publish --tag ${{ inputs.is_draft && 'beta' || 'latest' }} --verbose
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
