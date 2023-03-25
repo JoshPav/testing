@@ -16,6 +16,8 @@ jobs:
     with:
       path: ./package
       is_draft: ${{ github.ref != 'refs/heads/master' }}
-      default_branch: 'main' 
+      default_branch: 'main'
+      build_command: 'yarn build'
+      publish_directory: 'dist'
     secrets:
       NPM_TOKEN: ${{ secrets.NPM }}
