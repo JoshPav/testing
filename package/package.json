@@ -5,7 +5,7 @@
   "main": "index.js",
   "private": false,
   "scripts": {
-    "build": "mkdir -p dist/ && cp package.json dist && cp index.js dist",
+    "build": "mkdir -p dist/ && cp package.json dist && cp yarn.lock dist && cp index.js dist",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",

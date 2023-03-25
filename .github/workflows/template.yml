@@ -106,16 +106,15 @@ jobs:
           cache-dependency-path: ${{ inputs.path }}/yarn.lock
       - name: Set draft version in package.json
         run: npm version $VERSION --allow-same-version
-      - name: Build package
-        if: inputs.build_command != ''
-        run: ${{ inputs.build_command }}
-      - name: Switch to publish dir
-        run: cd ${{ inputs.publish_directory }}
-      - name: Install
-        run: yarn install --ignore-scripts --production
+      - name: Build and publish package
+        run: |
+          echo "Building package"
+          ${{ inputs.build_command != '' && inputs.build_command }}
+          cd ${{ inputs.publish_directory }}
+          echo "Installing prod dependencies"
+          yarn install --ignore-scripts --production --pure-lockfile
+          echo "Publishing package"
+          yarn publish --tag ${{ inputs.is_draft && 'beta' || 'latest' }} --verbose
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - name: Publish
-        run: yarn publish --tag ${{ inputs.is_draft && 'beta' || 'latest' }} --verbose
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        
