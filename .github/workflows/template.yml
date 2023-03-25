@@ -1,0 +1,117 @@
+on:
+  workflow_call:
+    inputs:
+      path:
+        required: true
+        type: string
+      publish_directory:
+        default: '.'
+        type: string
+      is_draft:
+        required: true
+        type: boolean
+      node-version:
+        type: number
+        default: 18
+      build_command:
+        type: string
+        required: false
+    secrets:
+      NPM_TOKEN:
+        required: true
+    outputs:
+      version:
+        description: "The version of the artifact"
+        value: ${{ jobs.get_package_version.outputs.version }}
+
+jobs:
+  patch_version:
+    name: 'Increment and commit package version if needed'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.path }}
+    if: inputs.is_draft
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node-version }}
+      - run: git fetch origin master:master --depth 1
+      - id: master
+        name: Get version on master
+        run: echo "version=$(git show master:./package.json | jq '.version')" >> $GITHUB_OUTPUT
+      - id: current
+        name: Get version on current branch
+        run: echo "version=$(cat package.json | jq '.version')" >> $GITHUB_OUTPUT
+      - if: steps.master.outputs.version == steps.current.outputs.version
+        name: Bump current branch package version
+        run: |
+          echo "Current version: ${{ steps.current.outputs.version }} matches the version on master: ${{ steps.master.outputs.version }}. Bumping version..."
+          git config user.name github-actions[bot]
+          git config user.email github-actions[bot]@users.noreply.github.com
+          npm version patch
+          git status
+          git add .
+          git commit -m "Bump $(cat package.json | jq -r '.name') to version $(cat package.json | jq -r '.version')"
+          git push
+
+  get_package_version:
+    name: 'Generate package version'
+    needs: patch_version
+    runs-on: ubuntu-latest
+    if: always() && (!inputs.is_draft || needs.patch_version.result == 'success')
+    defaults:
+      run:
+        working-directory: ${{ inputs.path }}
+    outputs:
+      version: ${{ inputs.is_draft && steps.generate-version.outputs.draft_version || steps.current-version.outputs.current_version }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Get current version
+        id: current-version
+        run: | 
+          export CURRENT_VERSION=$(cat package.json | jq -r '.version')
+          echo "Existing version: $CURRENT_VERSION"
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+      - name: Generate new draft version
+        id: generate-version
+        if: inputs.is_draft
+        run: |
+          export DRAFT_VERSION="${{ steps.current-version.outputs.current_version }}-${{ github.event.pull_request.number }}-beta.${{ github.sha }}"
+          echo "New version to be published: $DRAFT_VERSION"
+          echo "draft_version=$DRAFT_VERSION" >> $GITHUB_OUTPUT
+
+  build_and_publish_npm_package:
+    name: 'Build and publish NPM package'
+    needs: get_package_version
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.get_package_version.outputs.version }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.path }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: 'yarn'
+          registry-url: "https://registry.yarnpkg.com"
+      - name: Set draft version in package.json
+        run: npm version $VERSION --allow-same-version
+      - name: Build package
+        if: inputs.build_command != ''
+        run: ${{ inputs.build_command }}
+      - name: Switch to publish dir
+        run: cd ${{ inputs.publish_directory }}
+      - name: Install
+        run: yarn install --ignore-scripts --production
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish
+        run: yarn publish --tag ${{ inputs.is_draft && 'beta' || 'latest' }} --verbose
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -1,0 +1,20 @@
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - package/**
+  push:
+      branches:
+        - main
+      paths: 
+        - package/**
+
+jobs:
+  build_and_publish_npm_draft:
+    uses: ./.github/workflows/template.yml
+    with:
+      path: ./package
+      is_draft: ${{ github.ref == 'refs/heads/master' }} 
+    secrets:
+      NPM_TOKEN: ${{ secrets.NPM }}
