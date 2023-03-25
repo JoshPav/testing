@@ -42,7 +42,6 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: ${{ inputs.node-version }}
-          cache-dependency-path: ${{ inputs.path }}/yarn.lock
       - run: git fetch origin ${{ inputs.default_branch }}:${{ inputs.default_branch }} --depth 1
       - id: default_branch_version
         name: Get version on default branch
