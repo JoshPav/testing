@@ -15,7 +15,7 @@ jobs:
     uses: ./.github/workflows/template.yml
     with:
       path: ./package
-      is_draft: ${{ github.ref != 'refs/heads/master' }}
+      is_draft: ${{ github.ref != 'refs/heads/main' }}
       default_branch: 'main'
       build_command: 'yarn build'
       publish_directory: 'dist'
