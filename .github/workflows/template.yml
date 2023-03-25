@@ -62,7 +62,7 @@ jobs:
           git push
 
   get_package_version:
-    name: 'Generate package version'
+    name: 'Get package version'
     needs: patch_version
     runs-on: ubuntu-latest
     if: always() && (!inputs.is_draft || needs.patch_version.result == 'success')
@@ -90,6 +90,7 @@ jobs:
   build_and_publish_npm_package:
     name: 'Build and publish NPM package'
     needs: get_package_version
+    if: always() && needs.get_package_version.result == 'success'
     runs-on: ubuntu-latest
     env:
       VERSION: ${{ needs.get_package_version.outputs.version }}
