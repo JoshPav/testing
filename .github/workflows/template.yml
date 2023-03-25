@@ -103,6 +103,7 @@ jobs:
           node-version: ${{ inputs.node-version }}
           cache: 'yarn'
           registry-url: "https://registry.yarnpkg.com"
+          cache-dependency-path: ${{ inputs.path }}/yarn.lock
       - name: Set draft version in package.json
         run: npm version $VERSION --allow-same-version
       - name: Build package
