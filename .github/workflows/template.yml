@@ -16,6 +16,9 @@ on:
       build_command:
         type: string
         required: false
+      default_branch:
+        type: string
+        default: master
     secrets:
       NPM_TOKEN:
         required: true
@@ -39,17 +42,17 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: ${{ inputs.node-version }}
-      - run: git fetch origin master:master --depth 1
-      - id: master
-        name: Get version on master
-        run: echo "version=$(git show master:./package.json | jq '.version')" >> $GITHUB_OUTPUT
+      - run: git fetch origin ${{ inputs.default_branch }}:${{ inputs.default_branch }} --depth 1
+      - id: default_branch_version
+        name: Get version on default branch
+        run: echo "version=$(git show ${{ inputs.default_branch }}:./package.json | jq '.version')" >> $GITHUB_OUTPUT
       - id: current
         name: Get version on current branch
         run: echo "version=$(cat package.json | jq '.version')" >> $GITHUB_OUTPUT
-      - if: steps.master.outputs.version == steps.current.outputs.version
+      - if: steps.default_branch_version.outputs.version == steps.current.outputs.version
         name: Bump current branch package version
         run: |
-          echo "Current version: ${{ steps.current.outputs.version }} matches the version on master: ${{ steps.master.outputs.version }}. Bumping version..."
+          echo "Current version: ${{ steps.current.outputs.version }} matches the version on default branch: ${{ steps.default_branch_version.outputs.version }}. Bumping version..."
           git config user.name github-actions[bot]
           git config user.email github-actions[bot]@users.noreply.github.com
           npm version patch
@@ -100,18 +103,16 @@ jobs:
           node-version: ${{ inputs.node-version }}
           cache: 'yarn'
           registry-url: "https://registry.yarnpkg.com"
+          cache-dependency-path: ${{ inputs.path }}/yarn.lock
       - name: Set draft version in package.json
         run: npm version $VERSION --allow-same-version
-      - name: Build package
-        if: inputs.build_command != ''
-        run: ${{ inputs.build_command }}
-      - name: Switch to publish dir
-        run: cd ${{ inputs.publish_directory }}
-      - name: Install
-        run: yarn install --ignore-scripts --production
+      - name: Build and publish package
+        run: |
+          ${{ inputs.build_command != '' && 'echo Building package...' || 'echo No build command specfied.'}}
+          ${{ inputs.build_command != '' &&  inputs.build_command }}
+          cd ${{ inputs.publish_directory }}
+          echo "Publishing package..."
+          yarn publish --tag ${{ inputs.is_draft && 'beta' || 'latest' }} --verbose
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - name: Publish
-        run: yarn publish --tag ${{ inputs.is_draft && 'beta' || 'latest' }} --verbose
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        
