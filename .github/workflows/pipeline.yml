@@ -15,6 +15,6 @@ jobs:
     uses: ./.github/workflows/template.yml
     with:
       path: ./package
-      is_draft: ${{ github.ref == 'refs/heads/master' }} 
+      is_draft: ${{ github.ref != 'refs/heads/master' }} 
     secrets:
       NPM_TOKEN: ${{ secrets.NPM }}
